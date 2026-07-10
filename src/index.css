@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { font-family: "Inter", system-ui, -apple-system, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #0a0a0f; color: #e4e4e7; -webkit-font-smoothing: antialiased; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3a4a; }
+
+@layer components {
+  .glass-card { @apply bg-bg-surface border border-border rounded-2xl; }
+  .btn-primary { @apply px-5 py-2.5 rounded-xl bg-accent text-white font-medium hover:bg-accent-hover transition-all duration-200 active:scale-95; }
+  .btn-secondary { @apply px-5 py-2.5 rounded-xl bg-bg-elevated text-zinc-300 font-medium hover:bg-bg-hover border border-border transition-all duration-200 active:scale-95; }
+  .btn-ghost { @apply px-3 py-2 rounded-lg text-zinc-400 hover:text-white hover:bg-bg-hover transition-all duration-200; }
+  .input-field { @apply w-full px-4 py-2.5 rounded-xl bg-bg-elevated border border-border text-white placeholder:text-muted focus:outline-none focus:border-accent transition-all duration-200; }
+}
