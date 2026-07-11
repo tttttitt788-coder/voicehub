@@ -1,7 +1,7 @@
 import { useAppStore, isGuest } from "../store/appStore";
 import { supabase } from "../lib/supabase";
 import type { Profile } from "../types";
-import { Home, LogOut, Coins, Crown, Sparkles, UserCog } from "lucide-react";
+import { Home, LogOut, Coins, Crown, Sparkles, UserCog, Shield } from "lucide-react";
 import { useState } from "react";
 
 export function Navigation() {
@@ -55,6 +55,11 @@ export function Navigation() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                 view === "lobby" || view === "room" ? "bg-accent text-white" : "text-zinc-400 hover:text-white hover:bg-bg-hover"}`}>
               <Home className="w-4 h-4" /><span className="hidden sm:inline">Rooms</span>
+            </button>
+            <button onClick={() => setView("admin")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                view === "admin" ? "bg-accent text-white" : "text-zinc-400 hover:text-white hover:bg-bg-hover"}`}>
+              <Shield className="w-4 h-4" /><span className="hidden sm:inline">Admin</span>
             </button>
           </nav>
           <div className="flex items-center gap-3">

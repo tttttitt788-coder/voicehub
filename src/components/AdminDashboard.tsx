@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAppStore } from "../store/appStore";
-import type { Room, Seat, Profile, GiftTransaction, Gift as GiftType } from "../types";
+import type { Room, Profile, GiftTransaction, Gift as GiftType } from "../types";
 import { parseAvatar } from "../lib/api";
-import { Users, Radio, Trash2, Eye, TrendingUp, Gift, Activity, Search, Ban, Crown, Coins, Edit3, X, Shield } from "lucide-react";
+import { Users, Radio, Trash2, Eye, TrendingUp, Gift, Activity, Search, Ban, Crown, Coins, Edit3, X } from "lucide-react";
 
 export function AdminDashboard() {
   const { setView, setActiveRoomId } = useAppStore();

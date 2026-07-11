@@ -76,4 +76,4 @@ export interface Report {
   created_at: string;
 }
 
-export type View = "lobby" | "room";
+export type View = "lobby" | "room" | "admin";

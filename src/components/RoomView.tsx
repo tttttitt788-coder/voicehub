@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAppStore } from "../store/appStore";
-import { fetchLiveKitToken, parseAvatar } from "../lib/api";
+import { fetchLiveKitToken } from "../lib/api";
 import type { Room as RoomType, Seat, Message, Gift as GiftType, Profile } from "../types";
 import { RoomHeader } from "./RoomHeader";
 import { SeatGrid } from "./SeatGrid";
