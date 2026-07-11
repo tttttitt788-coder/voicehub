@@ -5,7 +5,7 @@ import { Home, LogOut, Coins, Crown, Sparkles, UserCog, Shield } from "lucide-re
 import { useState } from "react";
 
 export function Navigation() {
-  const { view, setView, profile, setProfile, setActiveRoomId } = useAppStore();
+  const { view, setView, profile, setProfile, setActiveRoomId, adminToken, setAdminToken } = useAppStore();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeNickname, setUpgradeNickname] = useState("");
   const [upgrading, setUpgrading] = useState(false);
@@ -13,8 +13,10 @@ export function Navigation() {
 
   const handleLogout = () => {
     localStorage.removeItem("voicehub_profile");
+    localStorage.removeItem("voicehub_admin_token");
     setProfile(null);
     setActiveRoomId(null);
+    setAdminToken(null);
   };
 
   const handleUpgrade = async (e: React.FormEvent) => {
@@ -27,8 +29,8 @@ export function Navigation() {
     const { data: existing } = await supabase.from("profiles").select("id").eq("nickname", trimmed).maybeSingle();
     if (existing) { setUpgradeError("This nickname is already taken."); setUpgrading(false); return; }
 
-    const { data, error } = await supabase.from("profiles").update({ nickname: trimmed, is_guest: false }).eq("id", profile!.id).select().single();
-    if (error) { setUpgradeError("Failed to upgrade account."); setUpgrading(false); return; }
+    const { data, error } = await supabase.from("profiles").update({ nickname: trimmed, is_guest: false }).eq("id", profile!.id).select().maybeSingle();
+    if (error || !data) { setUpgradeError("Failed to upgrade account."); setUpgrading(false); return; }
 
     const updated = data as Profile;
     localStorage.setItem("voicehub_profile", JSON.stringify(updated));
@@ -60,6 +62,7 @@ export function Navigation() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                 view === "admin" ? "bg-accent text-white" : "text-zinc-400 hover:text-white hover:bg-bg-hover"}`}>
               <Shield className="w-4 h-4" /><span className="hidden sm:inline">Admin</span>
+              {adminToken && <span className="w-1.5 h-1.5 rounded-full bg-success" />}
             </button>
           </nav>
           <div className="flex items-center gap-3">
@@ -81,6 +84,12 @@ export function Navigation() {
             {profile && isGuest(profile) && (
               <button onClick={() => setShowUpgrade(true)} className="btn-ghost text-accent" title="Upgrade account">
                 <UserCog className="w-4 h-4" />
+              </button>
+            )}
+            {view === "admin" && adminToken && (
+              <button onClick={() => { localStorage.removeItem("voicehub_admin_token"); setAdminToken(null); }}
+                className="btn-ghost text-warning" title="Admin logout">
+                <Shield className="w-4 h-4" />
               </button>
             )}
             <button onClick={handleLogout} className="btn-ghost" title="Logout"><LogOut className="w-4 h-4" /></button>

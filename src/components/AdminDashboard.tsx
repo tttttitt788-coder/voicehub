@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAppStore } from "../store/appStore";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 import type { Room, Profile, GiftTransaction, Gift as GiftType } from "../types";
 import { parseAvatar } from "../lib/api";
-import { Users, Radio, Trash2, Eye, TrendingUp, Gift, Activity, Search, Ban, Crown, Coins, Edit3, X } from "lucide-react";
+import { Users, Radio, Trash2, Eye, TrendingUp, Gift, Activity, Search, Ban, Crown, Coins, Edit3, X, LogOut, KeyRound, Power } from "lucide-react";
 
 export function AdminDashboard() {
-  const { setView, setActiveRoomId } = useAppStore();
+  const { setView, setActiveRoomId, adminToken, setAdminToken } = useAppStore();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [giftTransactions, setGiftTransactions] = useState<any[]>([]);
@@ -18,6 +19,11 @@ export function AdminDashboard() {
   const [editRoomName, setEditRoomName] = useState("");
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [editCoins, setEditCoins] = useState(0);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const fetchData = useCallback(async () => {
     const { data: roomData } = await supabase.from("rooms").select("*").order("created_at", { ascending: false });
@@ -43,7 +49,19 @@ export function AdminDashboard() {
     fetchData();
   };
 
+  const handleSuspendRoom = async (roomId: string) => {
+    await supabase.from("rooms").update({ status: "suspended" }).eq("id", roomId);
+    fetchData();
+  };
+
+  const handleActivateRoom = async (roomId: string) => {
+    await supabase.from("rooms").update({ status: "active", is_live: true }).eq("id", roomId);
+    fetchData();
+  };
+
   const handleDeleteRoom = async (roomId: string) => {
+    await supabase.from("seats").delete().eq("room_id", roomId);
+    await supabase.from("messages").delete().eq("room_id", roomId);
     await supabase.from("rooms").delete().eq("id", roomId);
     fetchData();
   };
@@ -82,9 +100,31 @@ export function AdminDashboard() {
     fetchData();
   };
 
+  const handleAdminLogout = () => {
+    localStorage.removeItem("voicehub_admin_token");
+    setAdminToken(null);
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) { setPasswordError("Password must be at least 6 characters"); return; }
+    setChangingPassword(true);
+    setPasswordError("");
+    setPasswordSuccess(false);
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_ANON_KEY}`, apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify({ action: "change_password", new_password: newPassword, token: adminToken }),
+      });
+      const data = await response.json();
+      if (data.error) { setPasswordError(data.error); }
+      else { setPasswordSuccess(true); setNewPassword(""); setShowChangePassword(false); }
+    } catch { setPasswordError("Network error"); }
+    setChangingPassword(false);
+  };
+
   const liveRooms = rooms.filter((r) => r.is_live && r.status === "active");
   const totalGiftValue = giftTransactions.reduce((sum, tx) => sum + (tx.gift?.price || 0), 0);
-
   const filteredRooms = rooms.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()) || (r.topic || "").toLowerCase().includes(search.toLowerCase()));
   const filteredProfiles = profiles.filter((p) => p.nickname.toLowerCase().includes(search.toLowerCase()) || String(p.user_id_num || "").includes(search));
 
@@ -99,9 +139,19 @@ export function AdminDashboard() {
 
   return (
     <div className="pt-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-        <p className="text-muted text-sm mt-1">Monitor and manage your voice chat platform</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+          <p className="text-muted text-sm mt-1">Monitor and manage your voice chat platform</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowChangePassword(true)} className="btn-secondary flex items-center gap-2 text-sm">
+            <KeyRound className="w-4 h-4" /> Change Password
+          </button>
+          <button onClick={handleAdminLogout} className="btn-secondary flex items-center gap-2 text-sm text-warning">
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -181,6 +231,8 @@ export function AdminDashboard() {
               <div className="flex items-center gap-2">
                 <button onClick={() => { setActiveRoomId(room.id); setView("room"); }} className="btn-ghost" title="View room"><Eye className="w-4 h-4" /></button>
                 <button onClick={() => { setEditingRoom(room); setEditRoomName(room.name); }} className="btn-ghost" title="Rename room"><Edit3 className="w-4 h-4" /></button>
+                {room.status === "active" && <button onClick={() => handleSuspendRoom(room.id)} className="btn-ghost text-warning" title="Suspend room"><Power className="w-4 h-4" /></button>}
+                {room.status === "suspended" && <button onClick={() => handleActivateRoom(room.id)} className="btn-ghost text-success" title="Activate room"><Power className="w-4 h-4" /></button>}
                 {room.is_live && <button onClick={() => handleEndRoom(room.id)} className="btn-ghost text-warning" title="End room"><Radio className="w-4 h-4" /></button>}
                 <button onClick={() => handleDeleteRoom(room.id)} className="btn-ghost text-error" title="Delete room"><Trash2 className="w-4 h-4" /></button>
               </div>
@@ -202,6 +254,7 @@ export function AdminDashboard() {
                       <p className="font-medium text-white">{p.nickname}</p>
                       {p.vip && <Crown className="w-3.5 h-3.5 text-amber-400" />}
                       {p.is_banned && <span className="text-xs text-error bg-error/10 px-2 py-0.5 rounded-full">Banned</span>}
+                      {p.is_guest && <span className="text-xs text-accent bg-accent/10 px-2 py-0.5 rounded-full">Guest</span>}
                     </div>
                     <p className="text-xs text-muted">ID: {p.user_id_num || "N/A"} • Level {p.level} • {p.coins} coins</p>
                   </div>
@@ -281,6 +334,27 @@ export function AdminDashboard() {
               <button onClick={() => setEditCoins(editCoins + 500)} className="btn-secondary !px-3">+500</button>
             </div>
             <button onClick={handleUpdateCoins} className="btn-primary w-full">Save</button>
+          </div>
+        </div>
+      )}
+
+      {showChangePassword && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => { setShowChangePassword(false); setPasswordError(""); setNewPassword(""); }}>
+          <div className="glass-card p-6 w-full max-w-md animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">Change Admin Password</h2>
+              <button onClick={() => { setShowChangePassword(false); setPasswordError(""); setNewPassword(""); }} className="btn-ghost"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">New Password</label>
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 6 characters" className="input-field" autoFocus />
+              </div>
+              {passwordError && <p className="text-error text-sm">{passwordError}</p>}
+              <button onClick={handleChangePassword} disabled={changingPassword} className="btn-primary w-full disabled:opacity-50">
+                {changingPassword ? "Changing..." : "Change Password"}
+              </button>
+            </div>
           </div>
         </div>
       )}

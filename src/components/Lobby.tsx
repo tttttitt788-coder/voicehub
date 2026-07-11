@@ -53,7 +53,7 @@ export function Lobby() {
     setCreateError("");
 
     const { data: existingRoom } = await supabase
-      .from("rooms").select("*").eq("owner_id", profile.id).eq("status", "active").maybeSingle();
+      .from("rooms").select("*").eq("owner_id", profile.id).in("status", ["active", "closed", "suspended"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
 
     if (existingRoom) {
       const room = existingRoom as Room;
@@ -63,20 +63,30 @@ export function Lobby() {
         is_live: true,
         status: "active",
       }).eq("id", room.id);
+
+      const { data: existingSeats } = await supabase.from("seats").select("id").eq("room_id", room.id);
+      if (!existingSeats || existingSeats.length === 0) {
+        const seats = Array.from({ length: 8 }, (_, i) => ({
+          room_id: room.id, seat_number: i, role: i === 0 ? "owner" : "listener", is_muted: false, is_locked: false,
+          occupant_id: i === 0 ? profile.id : null,
+        }));
+        await supabase.from("seats").insert(seats);
+      } else {
+        await supabase.from("seats").update({ occupant_id: profile.id, role: "owner", is_muted: false }).eq("room_id", room.id).eq("seat_number", 0);
+        await supabase.from("seats").update({ occupant_id: null, role: "listener", is_muted: false, is_locked: false }).neq("seat_number", 0).eq("room_id", room.id);
+      }
+
+      await supabase.from("messages").insert({ room_id: room.id, sender_id: profile.id, content: `${profile.nickname} reopened the room`, type: "system" });
       setCreating(false); setShowCreate(false); setNewRoomName(""); setNewRoomTopic("");
       setActiveRoomId(room.id); setView("room");
       return;
     }
 
     const { data: roomData, error: roomError } = await supabase
-      .from("rooms").insert({ name: newRoomName.trim(), topic: newRoomTopic.trim() || null, owner_id: profile.id, max_seats: 8, is_live: true, status: "active" }).select().single();
+      .from("rooms").insert({ name: newRoomName.trim(), topic: newRoomTopic.trim() || null, owner_id: profile.id, max_seats: 8, is_live: true, status: "active" }).select().maybeSingle();
     if (roomError || !roomData) {
-      setCreateError(roomError?.code === "23505" ? "You already own a room. Opening it instead." : "Failed to create room.");
+      setCreateError(`Failed to create room: ${roomError?.message || "Unknown error"}`);
       setCreating(false);
-      if (roomError?.code === "23505") {
-        const { data: myRoom } = await supabase.from("rooms").select("*").eq("owner_id", profile.id).eq("status", "active").maybeSingle();
-        if (myRoom) { setShowCreate(false); setActiveRoomId(myRoom.id); setView("room"); }
-      }
       return;
     }
     const room = roomData as Room;
@@ -84,7 +94,12 @@ export function Lobby() {
       room_id: room.id, seat_number: i, role: i === 0 ? "owner" : "listener", is_muted: false, is_locked: false,
       occupant_id: i === 0 ? profile.id : null,
     }));
-    await supabase.from("seats").insert(seats);
+    const { error: seatsError } = await supabase.from("seats").insert(seats);
+    if (seatsError) {
+      setCreateError(`Failed to create seats: ${seatsError.message}`);
+      setCreating(false);
+      return;
+    }
     await supabase.from("messages").insert({ room_id: room.id, sender_id: profile.id, content: `${profile.nickname} created the room`, type: "system" });
     setCreating(false); setShowCreate(false); setNewRoomName(""); setNewRoomTopic("");
     setActiveRoomId(room.id); setView("room");
