@@ -56,6 +56,12 @@ export function Onboarding() {
       .from("profiles").insert({ nickname: guestNickname, avatar_url: avatarUrl, is_guest: true }).select().single();
 
     if (insertError) {
+      console.error("Guest profile creation failed:", {
+        message: insertError.message,
+        code: insertError.code,
+        details: insertError.details,
+        hint: insertError.hint,
+      });
       setError("Failed to create guest profile. Please try again.");
       setGuestLoading(false);
       return;
