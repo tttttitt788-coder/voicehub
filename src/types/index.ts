@@ -9,6 +9,7 @@ export interface Profile {
   coins: number;
   vip: boolean;
   is_banned: boolean;
+  is_guest: boolean;
 }
 
 export interface Room {
@@ -21,6 +22,8 @@ export interface Room {
   is_live: boolean;
   created_at: string;
   status: "active" | "suspended" | "closed";
+  image_url: string | null;
+  announcement: string | null;
 }
 
 export interface Seat {
@@ -63,4 +66,14 @@ export interface GiftTransaction {
   created_at: string;
 }
 
-export type View = "lobby" | "room" | "admin";
+export interface Report {
+  id: string;
+  reporter_id: string | null;
+  reported_id: string | null;
+  room_id: string | null;
+  reason: string;
+  status: "pending" | "reviewed" | "resolved";
+  created_at: string;
+}
+
+export type View = "lobby" | "room";

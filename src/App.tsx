@@ -3,7 +3,6 @@ import { useAppStore } from "./store/appStore";
 import { Onboarding } from "./components/Onboarding";
 import { Lobby } from "./components/Lobby";
 import { RoomView } from "./components/RoomView";
-import { AdminDashboard } from "./components/AdminDashboard";
 import { Navigation } from "./components/Navigation";
 
 export default function App() {
@@ -28,7 +27,6 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 pb-8">
         {view === "lobby" && <Lobby />}
         {view === "room" && <RoomView />}
-        {view === "admin" && <AdminDashboard />}
       </main>
     </div>
   );

@@ -18,3 +18,7 @@ export const useAppStore = create<AppState>((set) => ({
   setView: (view) => set({ view }),
   setActiveRoomId: (activeRoomId) => set({ activeRoomId }),
 }));
+
+export function isGuest(profile: Profile | null): boolean {
+  return profile?.is_guest === true;
+}

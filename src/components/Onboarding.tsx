@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAppStore } from "../store/appStore";
 import { supabase } from "../lib/supabase";
 import type { Profile } from "../types";
+import { UserPlus, Sparkles } from "lucide-react";
 
 const avatarEmojis = ["🦊", "🐼", "🦉", "🐱", "🐶", "🦁", "🐸", "🐧", "🦄", "🐙"];
 const avatarColors = [
@@ -14,6 +15,7 @@ export function Onboarding() {
   const { setProfile } = useAppStore();
   const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
   const [error, setError] = useState("");
   const [avatarEmoji, setAvatarEmoji] = useState(avatarEmojis[0]);
   const [colorIdx, setColorIdx] = useState(0);
@@ -27,11 +29,35 @@ export function Onboarding() {
 
     const avatarUrl = `emoji:${avatarEmoji}:${avatarColors[colorIdx]}`;
     const { data, error: insertError } = await supabase
-      .from("profiles").insert({ nickname: trimmed, avatar_url: avatarUrl }).select().single();
+      .from("profiles").insert({ nickname: trimmed, avatar_url: avatarUrl, is_guest: false }).select().single();
 
     if (insertError) {
       setError(insertError.code === "23505" ? "This nickname is already taken." : "Failed to create profile.");
       setLoading(false);
+      return;
+    }
+
+    const profile = data as Profile;
+    localStorage.setItem("voicehub_profile", JSON.stringify(profile));
+    setProfile(profile);
+  };
+
+  const handleGuest = async () => {
+    setGuestLoading(true);
+    setError("");
+
+    const guestNum = Math.floor(100000 + Math.random() * 900000);
+    const guestNickname = `Guest${guestNum}`;
+    const randomEmoji = avatarEmojis[Math.floor(Math.random() * avatarEmojis.length)];
+    const randomColor = avatarColors[Math.floor(Math.random() * avatarColors.length)];
+    const avatarUrl = `emoji:${randomEmoji}:${randomColor}`;
+
+    const { data, error: insertError } = await supabase
+      .from("profiles").insert({ nickname: guestNickname, avatar_url: avatarUrl, is_guest: true }).select().single();
+
+    if (insertError) {
+      setError("Failed to create guest profile. Please try again.");
+      setGuestLoading(false);
       return;
     }
 
@@ -80,8 +106,24 @@ export function Onboarding() {
               <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Enter a nickname..." className="input-field" maxLength={20} autoFocus />
             </div>
             {error && <p className="text-error text-sm animate-fade-in">{error}</p>}
-            <button type="submit" disabled={loading} className="btn-primary w-full">{loading ? "Creating profile..." : "Get Started"}</button>
+            <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              {loading ? "Creating profile..." : "Get Started"}
+            </button>
           </form>
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-muted">or</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+          <button onClick={handleGuest} disabled={guestLoading}
+            className="w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-bg-elevated text-zinc-300 font-medium hover:bg-bg-hover border border-border transition-all duration-200 active:scale-95 disabled:opacity-50">
+            <Sparkles className="w-4 h-4 text-accent" />
+            {guestLoading ? "Creating guest..." : "Continue as Guest"}
+          </button>
+          <p className="text-center text-muted text-xs mt-3">
+            Browse and listen as a guest. Upgrade later without losing your profile.
+          </p>
         </div>
         <p className="text-center text-muted text-xs mt-6">No account needed. Just pick a name and start chatting.</p>
       </div>
