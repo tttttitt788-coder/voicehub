@@ -32,7 +32,13 @@ export function Onboarding() {
       .from("profiles").insert({ nickname: trimmed, avatar_url: avatarUrl, is_guest: false }).select().single();
 
     if (insertError) {
-      setError(insertError.code === "23505" ? "This nickname is already taken." : "Failed to create profile.");
+      console.error("Profile creation failed:", {
+        message: insertError.message,
+        code: insertError.code,
+        details: insertError.details,
+        hint: insertError.hint,
+      });
+      setError(insertError.code === "23505" ? "This nickname is already taken." : `Failed to create profile: ${insertError.message}`);
       setLoading(false);
       return;
     }
